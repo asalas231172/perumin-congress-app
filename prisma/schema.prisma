@@ -1,0 +1,113 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Contact {
+  id          String   @id @default(cuid())
+  name        String
+  email       String   @unique
+  phone       String?
+  title       String?
+  linkedin    String?
+  notes       String?
+  companyId   String?
+  company     Company? @relation(fields: [companyId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Meeting participants relationship
+  meetings    MeetingParticipant[]
+  
+  @@map("contacts")
+}
+
+model Company {
+  id              String    @id @default(cuid())
+  name            String    @unique
+  industry        String?
+  description     String?
+  website         String?
+  projects        String?  // JSON string of project names
+  keyPersonnel    String?  // JSON string of key personnel names
+  headquarters    String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relationships
+  contacts        Contact[]
+  
+  @@map("companies")
+}
+
+model Meeting {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  startTime   DateTime
+  endTime     DateTime
+  location    String?
+  meetingType MeetingType
+  leaderId    String?   // Who's leading the meeting from our team
+  keyTopics   String?  // JSON string of topics to discuss
+  actionItems String?  // JSON string of action items
+  status      MeetingStatus @default(SCHEDULED)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Meeting participants relationship
+  participants MeetingParticipant[]
+  reminders    Reminder[]
+  
+  @@map("meetings")
+}
+
+model MeetingParticipant {
+  id        String  @id @default(cuid())
+  meetingId String
+  contactId String
+  
+  meeting   Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  
+  @@unique([meetingId, contactId])
+  @@map("meeting_participants")
+}
+
+model Reminder {
+  id          String    @id @default(cuid())
+  meetingId   String
+  reminderTime DateTime
+  message     String?
+  sent        Boolean   @default(false)
+  sentAt      DateTime?
+  
+  meeting     Meeting   @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  
+  @@map("reminders")
+}
+
+enum MeetingType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  BOOTH_MEETING
+  INTERNAL_MEETING
+  PRESENTATION
+  NETWORKING
+}
+
+enum MeetingStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  RESCHEDULED
+}
